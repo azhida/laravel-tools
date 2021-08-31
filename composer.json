@@ -1,0 +1,24 @@
+{
+    "name": "azhida\/laravel-tools",
+    "description": "收集整理常用方法",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "azhida",
+            "email": "334064034@qq.com"
+        }
+    ],
+    "require": {},
+    "autoload": {
+        "psr-4": {
+            "Azhida\\Tools\\": "src"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Azhida\\Tools\\ServiceProvider"
+            ]
+        }
+    }
+}
