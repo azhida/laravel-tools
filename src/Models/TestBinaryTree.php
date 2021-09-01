@@ -68,6 +68,90 @@ class TestBinaryTree extends Model
         }
     }
 
+    // 获取ID节点下可添加的点位 -- 自上而下，从左到右
+    public static function searchAddEnableNodeById_DepthAsc_LToR($id = 0)
+    {
+        $parent = TestBinaryTree::query()
+            ->where('add_enable', true)
+            ->where('full_path', 'like', "-{$id}-")
+            ->orWhere('id', $id)
+            ->orderBy('depth')
+            ->orderBy('v_top_depth_x_10000000')
+            ->orderBy('v_top_depth_x_1000000')
+            ->orderBy('v_top_depth_x_100000')
+            ->orderBy('v_top_depth_x_10000')
+            ->orderBy('v_top_depth_x_1000')
+            ->orderBy('v_top_depth_x_100')
+            ->orderBy('v_top_depth_x_10')
+            ->orderBy('v_top_depth_x_1')
+            ->orderBy('v_depth_x_1')
+            ->first();
+
+        if (!$parent) {
+
+            $sons = TestBinaryTree::query()->where('full_path', 'like', "-{$id}-")->get();
+            $current_max_depth = $sons->max('depth');
+            $last_ids = $sons->where('depth', $current_max_depth)->pluck('id')->toArray();
+
+            while (count($sons) > 0) {
+
+                $query_1 = TestBinaryTree::query();
+                if ($current_max_depth % 10000000 == 0) {
+                    $query_1->whereIn('v_top_ids_depth_10000000', $last_ids);
+                } else if ($current_max_depth % 1000000 == 0) {
+                    $query_1->whereIn('v_top_ids_depth_1000000', $last_ids);
+                } else if ($current_max_depth % 100000 == 0) {
+                    $query_1->whereIn('v_top_ids_depth_100000', $last_ids);
+                } else if ($current_max_depth % 10000 == 0) {
+                    $query_1->whereIn('v_top_ids_depth_10000', $last_ids);
+                } else if ($current_max_depth % 1000 == 0) {
+                    $query_1->whereIn('v_top_ids_depth_1000', $last_ids);
+                } else {
+                    $query_1->whereIn('v_top_ids_depth_100', $last_ids);
+                }
+                $parent = $query_1
+                    ->where('add_enable', true)
+                    ->where('depth', '>', $current_max_depth)
+                    ->orderBy('depth')
+                    ->orderBy('v_top_depth_x_10000000')
+                    ->orderBy('v_top_depth_x_1000000')
+                    ->orderBy('v_top_depth_x_100000')
+                    ->orderBy('v_top_depth_x_10000')
+                    ->orderBy('v_top_depth_x_1000')
+                    ->orderBy('v_top_depth_x_100')
+                    ->orderBy('v_top_depth_x_10')
+                    ->orderBy('v_top_depth_x_1')
+                    ->orderBy('v_depth_x_1')
+                    ->first();
+                if ($parent) break;
+
+                $query = TestBinaryTree::query()->where('depth', '>', $current_max_depth);
+                if ($current_max_depth % 10000000 == 0) {
+                    $query->whereIn('v_top_ids_depth_10000000', $last_ids);
+                } else if ($current_max_depth % 1000000 == 0) {
+                    $query->whereIn('v_top_ids_depth_1000000', $last_ids);
+                } else if ($current_max_depth % 100000 == 0) {
+                    $query->whereIn('v_top_ids_depth_100000', $last_ids);
+                } else if ($current_max_depth % 10000 == 0) {
+                    $query->whereIn('v_top_ids_depth_10000', $last_ids);
+                } else if ($current_max_depth % 1000 == 0) {
+                    $query->whereIn('v_top_ids_depth_1000', $last_ids);
+                } else {
+                    $query->whereIn('v_top_ids_depth_100', $last_ids);
+                }
+                $sons = $query->get();
+                if (count($sons) == 0) break;
+
+                $current_max_depth = $sons->max('depth');
+                $last_ids = $sons->where('depth', $current_max_depth)->pluck('id')->toArray();
+
+            }
+
+        }
+
+        return $parent;
+    }
+
     // 判断 A、D 两个节点是否存在祖孙关系
     public static function isAncestor_AD($ancestor_id, $descendant_id): bool
     {
