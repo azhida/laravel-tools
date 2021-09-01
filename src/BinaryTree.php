@@ -9,7 +9,7 @@ class BinaryTree
     public static $full_path_long = 100;
 
     public static $nodes = [];
-    
+
     public $table = 'test_binary_trees';
 
     // 一个点的字段标记
@@ -32,11 +32,6 @@ class BinaryTree
         'guided_path', // 坐标表示集 xy
         'show_info', // 展示信息【自定义】
     ];
-
-    public function createTables()
-    {
-        
-    }
 
     // 横向添加子节点 -- 填满指定ID的指定层数
     public static function addNodes_x($id, $depth = 10)

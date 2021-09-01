@@ -68,6 +68,113 @@ class TestBinaryTree extends Model
         }
     }
 
+    // 判断 A、D 两个节点是否存在祖孙关系
+    public static function isAncestor_AD($ancestor_id, $descendant_id): bool
+    {
+        if ($ancestor_id == $descendant_id) return false;
+
+        $testBinaryTrees = TestBinaryTree::query()->whereIn('id', [$ancestor_id, $descendant_id])->get();
+        if (count($testBinaryTrees) != 2) return false;
+
+        $ancestor = null;
+        $descendant = null;
+        foreach ($testBinaryTrees as $testBinaryTree) {
+            if ($testBinaryTree->id == $ancestor_id) $ancestor = $testBinaryTree;
+            if ($testBinaryTree->id == $descendant_id) $descendant = $testBinaryTree;
+        }
+        if (!$ancestor || !$descendant || $ancestor->depth >= $descendant->depth) return false;
+
+        while ($descendant && $descendant->parent_id != 0) {
+            $ids = explode('-', $descendant->full_path);
+            if (in_array($ancestor_id, $ids)) return  true;
+            $descendant = TestBinaryTree::query()->find($descendant->full_path_start_id);
+        }
+        return false;
+    }
+
+    // 获取ID的所有上级
+    public static function getParentsById($id)
+    {
+        $testBinaryTree = TestBinaryTree::query()->find($id);
+        if (!$testBinaryTree) return Tool::resFailMsg('ID错误');
+        $full_path = '';
+        while ($testBinaryTree && $testBinaryTree->parent_id != 0) {
+            $full_path .= $testBinaryTree->full_path;
+            $testBinaryTree = TestBinaryTree::query()->find($testBinaryTree->full_path_start_id);
+        }
+
+        $ids = explode('-', $full_path);
+        $parents = TestBinaryTree::query()->whereIn('id', $ids)->get();
+        $data = [
+            'parents' => $parents,
+            'full_path' => $full_path,
+        ];
+        return Tool::resSuccessMsg('', $data);
+    }
+
+    // 获取ID所有子节点
+    public static function getSonsById($id, $depth = 10)
+    {
+        $testBinaryTree = TestBinaryTree::query()->find($id);
+        $max_depth = $testBinaryTree->depth + $depth;
+
+        $select_fields = [
+            'id',
+            'parent_id',
+            'depth',
+        ];
+
+        $sons = TestBinaryTree::query()
+            ->select($select_fields)
+            ->where('depth', '>', $testBinaryTree->depth)
+            ->where('depth', '<=', $max_depth)
+            ->where('full_path', 'like', "%-{$id}-%")
+            ->orWhere('id', $id)
+            ->get();
+
+        $current_max_depth = $sons->max('depth');
+        $last_ids = $sons->where('depth', $current_max_depth)->pluck('id')->toArray();
+
+        while ($current_max_depth < $max_depth && $current_max_depth % 100 == 0) {
+
+            $query = TestBinaryTree::query()->select($select_fields)
+                ->where('depth', '>', $current_max_depth)
+                ->where('depth', '<=', $max_depth);
+            if ($current_max_depth % 10000000 == 0) {
+                $query->whereIn('v_top_ids_depth_10000000', $last_ids);
+            }
+            else if ($current_max_depth % 1000000 == 0) {
+                $query->whereIn('v_top_ids_depth_1000000', $last_ids);
+            }
+            else if ($current_max_depth % 100000 == 0) {
+                $query->whereIn('v_top_ids_depth_100000', $last_ids);
+            }
+            else if ($current_max_depth % 10000 == 0) {
+                $query->whereIn('v_top_ids_depth_10000', $last_ids);
+            }
+            else if ($current_max_depth % 1000 == 0) {
+                $query->whereIn('v_top_ids_depth_1000', $last_ids);
+            }
+            else {
+                $query->whereIn('v_top_ids_depth_100', $last_ids);
+            }
+            $sons_1 = $query->get();
+            $sons = $sons->merge($sons_1);
+
+            $current_max_depth = $sons->max('depth');
+            $last_ids = $sons->where('depth', $current_max_depth)->pluck('id')->toArray();
+
+        }
+
+        $meta = [
+            'id' => $id,
+            'depth' => $depth,
+            'max_depth' => $max_depth,
+            'total_count' => count($sons),
+        ];
+        return Tool::resSuccessMsg('', $sons, $meta);
+    }
+
     // 横向添加子节点 -- 填满指定ID的指定层数
     public static function addNodes_x($id, $depth = 10)
     {
@@ -173,7 +280,6 @@ class TestBinaryTree extends Model
             $used_time = time() - $start_time;
             $average_time = $used_time / self::$num;
             $echo_msg = [
-                '$msg' => '添加子节点成功',
                 '$num' => self::$num,
                 '$depth' => $parent->depth,
                 '$used_time' => $used_time,
