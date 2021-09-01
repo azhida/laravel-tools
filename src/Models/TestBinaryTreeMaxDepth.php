@@ -1,6 +1,6 @@
 <?php
 
-namespace Azhida\Tools;
+namespace Azhida\Tools\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;

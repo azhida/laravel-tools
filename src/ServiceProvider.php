@@ -19,4 +19,14 @@ class ServiceProvider extends \Illuminate\Support\ServiceProvider
     {
         return [Tool::class, 'tool'];
     }
+
+    /**
+     * 在注册后启动服务
+     *
+     * @return void
+     */
+    public function boot()
+    {
+        $this->loadMigrationsFrom(__DIR__ . '/database/migrations');
+    }
 }
