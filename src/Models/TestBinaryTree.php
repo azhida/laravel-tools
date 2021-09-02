@@ -171,7 +171,12 @@ class TestBinaryTree extends Model
         return $node;
     }
 
-    // 判断 A、D 两个节点是否存在祖孙关系
+    /**
+     * @param $ancestor_id 祖先节点ID
+     * @param $descendant_id 后代节点ID
+     * @return bool
+     * 判断 A、D 两个节点是否存在祖孙关系
+     */
     public static function isAncestor_AD($ancestor_id, $descendant_id): bool
     {
         if ($ancestor_id == $descendant_id) return false;
@@ -215,7 +220,12 @@ class TestBinaryTree extends Model
         return Tool::resSuccessMsg('', $data);
     }
 
-    // 获取ID所有子节点
+    /**
+     * @param $id
+     * @param int $depth 获取的相对层数
+     * @return array
+     * 获取ID所有子节点
+     */
     public static function getSonsById($id, $depth = 10)
     {
         $testBinaryTree = TestBinaryTree::query()->find($id);
@@ -278,7 +288,12 @@ class TestBinaryTree extends Model
         return Tool::resSuccessMsg('', $sons, $meta);
     }
 
-    // 横向添加子节点 -- 填满指定ID的指定层数
+    /**
+     * @param $id
+     * @param int $depth 指定的绝对层级
+     * @return string
+     * 横向添加子节点 -- 填满指定ID的指定层数
+     */
     public static function addNodes_x($id, $depth = 10)
     {
         $start_time = time();
@@ -346,7 +361,14 @@ class TestBinaryTree extends Model
         return '结束';
     }
 
-    // 纵向添加子节点 -- 填满指定ID的指定边
+    /**
+     * @param $id
+     * @param $leg
+     * @param int $depth 指定的绝对层级
+     * @param string $start_time
+     * @return array
+     * 纵向添加子节点 -- 填满指定ID的指定边
+     */
     public static function addNodes_y($id, $leg, $depth = 1, $start_time = '')
     {
         if (!$start_time) $start_time = time();
