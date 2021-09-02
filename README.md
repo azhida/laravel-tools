@@ -13,6 +13,11 @@ $ composer require azhida/laravel-tools -vvv
 $ php artisan vendor:publish
 # 选择 Azhida\Tools\ServiceProvider
 ```
+###### 执行迁移文件
+```shell
+$ php artisan migrate --path=database/migrations/2021_08_31_091229_create_test_binary_trees_table.php
+$ php artisan migrate --path=database/migrations/2021_08_31_092504_create_test_binary_tree_max_depths_table.php
+```
 
 ## Usage
 

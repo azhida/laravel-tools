@@ -163,7 +163,7 @@ class TestBinaryTree extends Model
         if (!$node) return null;
         if ($node->{$leg.'_add_enable'}) return $node;
 
-        $max_depth = TestBinaryTreeMaxDepth::getTestBinaryTreeMaxDepth($node->{$leg.'_turning_point_id'});
+        $max_depth = TestBinaryTreeMaxDepth::getTestBinaryTreeMaxDepth($node->{$leg.'_turning_point_id'}, $node->leg_of_parent);
         $node = TestBinaryTree::query()
             ->where('turning_point_id', $node->{$leg.'_turning_point_id'})
             ->where('depth', $max_depth)
@@ -376,7 +376,7 @@ class TestBinaryTree extends Model
         $parent = TestBinaryTree::query()->find($id);
         if (!$parent->{$leg.'_add_enable'}) {
             $turning_point_id = $parent->{$leg.'_turning_point_id'};
-            $max_depth = TestBinaryTreeMaxDepth::getTestBinaryTreeMaxDepth($turning_point_id);
+            $max_depth = TestBinaryTreeMaxDepth::getTestBinaryTreeMaxDepth($turning_point_id, $parent->leg_of_parent);
 
             if ($max_depth > $depth) return Tool::resFailMsg('已经添加，无需重复');
             $parent = TestBinaryTree::query()
