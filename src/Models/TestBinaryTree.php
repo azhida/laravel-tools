@@ -12,7 +12,7 @@ class TestBinaryTree extends Model
     use HasFactory;
 
     // 父级链路的长度，默认 100，即 当 父级的深度depth 是 $full_path_long的整数倍时，full_path 字段 从 父级ID重新开始
-    public static $full_path_long = 100;
+    public static $full_path_long = 10;
     public static $num = 0;
 
     protected $fillable = [
@@ -68,6 +68,99 @@ class TestBinaryTree extends Model
         }
     }
 
+    // 修复二叉树
+    public static function fixTestBinaryTrees($start_depth = 0)
+    {        
+        $start_time = time();
+        $num = 0;
+
+        while (true) {
+            $start_id = 0;
+
+            $nodes = TestBinaryTree::query()
+                ->where('depth', $start_depth)
+                ->where('id', '>', $start_id)
+                ->orderBy('id')->limit(100)->get();
+            if (count($nodes) == 0) break;
+
+            while (true) {
+
+                foreach ($nodes as $node) {
+                    $start_id = $node->id;
+                    $num++;
+
+                    $context = [
+                        '$num' => $num,
+                        '$depth' => $start_depth,
+                        '$start_id' => $start_id,
+                        '$used_time' => time() - $start_time,
+                    ];
+                    echo Tool::loggerCustom(__CLASS__, __FUNCTION__, 'ing', $context, true);
+
+                    $parent = TestBinaryTree::query()->find($node->parent_id);
+                    if ($start_depth == 0) {
+                        $turning_point_id = 0;
+                        $top_xy = $xy = self::initXY();
+                        $top_ids = self::initTopIds($node->id);
+                        $full_path_start_id = $node->id;
+                        $full_path = "-{$node->id}-";
+                        $guided_path = '-';
+                    } else {
+                        $turning_point_id = $parent->{$node->leg_of_parent.'_turning_point_id'};
+                        $xy = self::makeXY($parent->xy, $node->leg_of_parent);
+                        $top_xy = self::makeTopXY($parent, $node->leg_of_parent);
+                        $top_ids = self::makeTopIds($parent);
+                        $full_path_start_id = $parent->full_path_start_id;
+                        $full_path = $parent->full_path . $parent->id . '-';
+                        $guided_path = $parent->guided_path . "{$parent->id}:{$node->leg_of_parent}-";
+                        if ($parent->depth % self::$full_path_long == 0) {
+                            $full_path_start_id = $parent->id;
+                            $full_path = '-' . $parent->id . '-';
+                            $guided_path = "-{$parent->id}:{$node->leg_of_parent}-";
+                        }
+                    }
+
+                    // 更新本身
+                    $node_update_data = [
+                        'turning_point_id' => $turning_point_id,
+                        'xy' => $xy,
+                        'top_xy' => $top_xy,
+                        'top_ids' => $top_ids,
+                        'full_path_start_id' => $full_path_start_id,
+                        'full_path' => $full_path,
+                        'guided_path' => $guided_path,
+                    ];
+                    $node->update($node_update_data);
+
+                    if ($parent) {
+                        // 更新上级
+                        $parent->{$node->leg_of_parent.'_add_enable'} = false;
+                        if (!$parent->L_add_enable && !$parent->R_add_enable) $parent->add_enable = false;
+                        $parent->{$node->leg_of_parent.'_son_id'} = $node->id;
+                        $parent->save();
+                    }
+
+                }
+
+                if (count($nodes) == 100) {
+                    $nodes = TestBinaryTree::query()->where('depth', $start_depth)->where('id', '>', $start_id)->orderBy('id')->limit(100)->get();
+                } else {
+                    break;
+                }
+            }
+            $start_depth++;
+        }
+
+        $context = [
+            '$num' => $num,
+            '$depth' => $start_depth,
+            '$used_time' => time() - $start_time,
+        ];
+        echo Tool::loggerCustom(__CLASS__, __FUNCTION__, 'end', $context, true);
+
+        return '结束';
+    }
+
     // 获取ID节点下可添加的点位 -- 自上而下，从左到右
     public static function searchAddEnableNodeById_DepthAsc_LToR($id)
     {
@@ -76,7 +169,7 @@ class TestBinaryTree extends Model
 
             $parent = TestBinaryTree::query()
                 ->where('add_enable', true)
-                ->where('full_path', 'like', "-{$id}-")
+                ->where('full_path', 'like', "%-{$id}-%")
                 ->orderBy('depth')
                 ->orderBy('v_top_depth_x_10000000')
                 ->orderBy('v_top_depth_x_1000000')
@@ -91,7 +184,7 @@ class TestBinaryTree extends Model
 
             if (!$parent) {
 
-                $sons = TestBinaryTree::query()->where('full_path', 'like', "-{$id}-")->get();
+                $sons = TestBinaryTree::query()->where('full_path', 'like', "%-{$id}-%")->get();
                 $current_max_depth = $sons->max('depth');
                 $last_ids = $sons->where('depth', $current_max_depth)->pluck('id')->toArray();
 
