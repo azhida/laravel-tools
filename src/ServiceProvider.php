@@ -27,6 +27,11 @@ class ServiceProvider extends \Illuminate\Support\ServiceProvider
      */
     public function boot()
     {
-        $this->loadMigrationsFrom(__DIR__ . '/database/migrations');
+//        $this->loadMigrationsFrom(__DIR__ . '/database/migrations');
+
+        $this->publishes([
+            __DIR__.'/database/migrations/2021_08_31_091229_create_test_binary_trees_table.php' => database_path('migrations/2021_08_31_091229_create_test_binary_trees_table.php'),
+            __DIR__.'/database/migrations/2021_08_31_092504_create_test_binary_tree_max_depths_table.php' => database_path('migrations/2021_08_31_092504_create_test_binary_tree_max_depths_table.php'),
+        ]);
     }
 }

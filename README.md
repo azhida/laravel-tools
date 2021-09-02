@@ -8,6 +8,11 @@
 ```shell
 $ composer require azhida/laravel-tools -vvv
 ```
+###### 发布迁移文件
+```shell
+$ php artisan vendor:publish
+# 选择 Azhida\Tools\ServiceProvider
+```
 
 ## Usage
 
