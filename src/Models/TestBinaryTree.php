@@ -70,7 +70,7 @@ class TestBinaryTree extends Model
 
     // 修复二叉树
     public static function fixTestBinaryTrees($start_depth = 0)
-    {        
+    {
         $start_time = time();
         $num = 0;
 
@@ -164,11 +164,32 @@ class TestBinaryTree extends Model
     // 获取ID节点下可添加的点位 -- 自上而下，从左到右
     public static function searchAddEnableNodeById_DepthAsc_LToR($id)
     {
-        $parent = TestBinaryTree::query()->where('add_enable', true)->find($id);
+        $parent = TestBinaryTree::query()->find($id);
+        if (!$parent || $parent->add_enable) return $parent;
+
+        $start_depth = $parent->depth;
+        $full_path_last_depth = TestBinaryTree::getFullPathLastDepth($start_depth);
+        $parent = TestBinaryTree::query()
+            ->where('add_enable', true)
+            ->where('depth', '>', $start_depth)
+            ->where('depth', '<=', $full_path_last_depth)
+            ->where('full_path', 'like', "%-{$id}-%")
+            ->orderBy('depth')
+            ->orderBy('v_top_depth_x_10000000')
+            ->orderBy('v_top_depth_x_1000000')
+            ->orderBy('v_top_depth_x_100000')
+            ->orderBy('v_top_depth_x_10000')
+            ->orderBy('v_top_depth_x_1000')
+            ->orderBy('v_top_depth_x_100')
+            ->orderBy('v_top_depth_x_10')
+            ->orderBy('v_top_depth_x_1')
+            ->orderBy('v_depth_x_1')
+            ->first();
+
         if (!$parent) {
 
-            $parent = TestBinaryTree::query()
-                ->where('add_enable', true)
+            $last_ids = TestBinaryTree::query()
+                ->where('depth', '=', $full_path_last_depth)
                 ->where('full_path', 'like', "%-{$id}-%")
                 ->orderBy('depth')
                 ->orderBy('v_top_depth_x_10000000')
@@ -180,74 +201,112 @@ class TestBinaryTree extends Model
                 ->orderBy('v_top_depth_x_10')
                 ->orderBy('v_top_depth_x_1')
                 ->orderBy('v_depth_x_1')
-                ->first();
+                ->pluck('id')->toArray();
+            $start_depth = $full_path_last_depth;
+            while (!$parent) {
 
-            if (!$parent) {
-
-                $sons = TestBinaryTree::query()->where('full_path', 'like', "%-{$id}-%")->get();
-                $current_max_depth = $sons->max('depth');
-                $last_ids = $sons->where('depth', $current_max_depth)->pluck('id')->toArray();
-
-                while (count($sons) > 0) {
-
-                    $query_1 = TestBinaryTree::query();
-                    if ($current_max_depth % 10000000 == 0) {
-                        $query_1->whereIn('v_top_ids_depth_10000000', $last_ids);
-                    } else if ($current_max_depth % 1000000 == 0) {
-                        $query_1->whereIn('v_top_ids_depth_1000000', $last_ids);
-                    } else if ($current_max_depth % 100000 == 0) {
-                        $query_1->whereIn('v_top_ids_depth_100000', $last_ids);
-                    } else if ($current_max_depth % 10000 == 0) {
-                        $query_1->whereIn('v_top_ids_depth_10000', $last_ids);
-                    } else if ($current_max_depth % 1000 == 0) {
-                        $query_1->whereIn('v_top_ids_depth_1000', $last_ids);
-                    } else {
-                        $query_1->whereIn('v_top_ids_depth_100', $last_ids);
-                    }
-                    $parent = $query_1
-                        ->where('add_enable', true)
-                        ->where('depth', '>', $current_max_depth)
-                        ->orderBy('depth')
-                        ->orderBy('v_top_depth_x_10000000')
-                        ->orderBy('v_top_depth_x_1000000')
-                        ->orderBy('v_top_depth_x_100000')
-                        ->orderBy('v_top_depth_x_10000')
-                        ->orderBy('v_top_depth_x_1000')
-                        ->orderBy('v_top_depth_x_100')
-                        ->orderBy('v_top_depth_x_10')
-                        ->orderBy('v_top_depth_x_1')
-                        ->orderBy('v_depth_x_1')
-                        ->first();
-                    if ($parent) break;
-
-                    $query = TestBinaryTree::query()->where('depth', '>', $current_max_depth);
-                    if ($current_max_depth % 10000000 == 0) {
-                        $query->whereIn('v_top_ids_depth_10000000', $last_ids);
-                    } else if ($current_max_depth % 1000000 == 0) {
-                        $query->whereIn('v_top_ids_depth_1000000', $last_ids);
-                    } else if ($current_max_depth % 100000 == 0) {
-                        $query->whereIn('v_top_ids_depth_100000', $last_ids);
-                    } else if ($current_max_depth % 10000 == 0) {
-                        $query->whereIn('v_top_ids_depth_10000', $last_ids);
-                    } else if ($current_max_depth % 1000 == 0) {
-                        $query->whereIn('v_top_ids_depth_1000', $last_ids);
-                    } else {
-                        $query->whereIn('v_top_ids_depth_100', $last_ids);
-                    }
-                    $sons = $query->get();
-                    if (count($sons) == 0) break;
-
-                    $current_max_depth = $sons->max('depth');
-                    $last_ids = $sons->where('depth', $current_max_depth)->pluck('id')->toArray();
-
-                }
-
+                $searchAddEnableNodeByLastIds_DepthAsc_LToR_res = self::searchAddEnableNodeByLastIds_DepthAsc_LToR($last_ids, $start_depth);
+                $parent = $searchAddEnableNodeByLastIds_DepthAsc_LToR_res['parent'];
+                $last_ids = $searchAddEnableNodeByLastIds_DepthAsc_LToR_res['last_ids'];
+                $start_depth = $searchAddEnableNodeByLastIds_DepthAsc_LToR_res['end_depth'];
+                
             }
 
         }
 
         return $parent;
     }
+    // 根据 top_ids 获取 可添加的子节点
+    public static function searchAddEnableNodeByLastIds_DepthAsc_LToR(array $last_ids, int $start_depth, $top_ids_length = 1024)
+    {
+        if ($start_depth % 10000000 == 0) {
+            $end_depth = $start_depth + 10000000;
+            $whereIn_key = 'v_top_ids_depth_10000000';
+        } else if ($start_depth % 1000000 == 0) {
+            $end_depth = $start_depth + 1000000;
+            $whereIn_key = 'v_top_ids_depth_1000000';
+        } else if ($start_depth % 100000 == 0) {
+            $end_depth = $start_depth + 100000;
+            $whereIn_key = 'v_top_ids_depth_100000';
+        } else if ($start_depth % 10000 == 0) {
+            $end_depth = $start_depth + 10000;
+            $whereIn_key = 'v_top_ids_depth_10000';
+        } else if ($start_depth % 1000 == 0) {
+            $end_depth = $start_depth + 1000;
+            $whereIn_key = 'v_top_ids_depth_1000';
+        } else if ($start_depth % 100 == 0) {
+            $end_depth = $start_depth + 100;
+            $whereIn_key = 'v_top_ids_depth_100';
+        } else { // $start_depth % 10 == 0
+            $end_depth = $start_depth + 10;
+            $whereIn_key = 'v_top_ids_depth_10';
+        }
+
+        $top_ids = array_splice($last_ids, 0, $top_ids_length); // 每次取10个出来查询
+        $sons = TestBinaryTree::query()
+            ->where('depth', '>', $start_depth)
+            ->where('depth', '<=', $end_depth)
+            ->whereIn($whereIn_key, $top_ids)
+            ->orderBy('depth')
+            ->orderBy('v_top_depth_x_10000000')
+            ->orderBy('v_top_depth_x_1000000')
+            ->orderBy('v_top_depth_x_100000')
+            ->orderBy('v_top_depth_x_10000')
+            ->orderBy('v_top_depth_x_1000')
+            ->orderBy('v_top_depth_x_100')
+            ->orderBy('v_top_depth_x_10')
+            ->orderBy('v_top_depth_x_1')
+            ->orderBy('v_depth_x_1')
+            ->get();
+        $node = $sons->where('add_enable', true)->first();
+        
+        $new_last_ids = $sons->where('depth', $end_depth)->pluck('id')->toArray();
+        
+        if ($node) {
+            // 同层的话，当前 $node 已经在最左边了，所以只需要查看是否存在 depth 比 $node 小的节点
+            $max_depth = $node->depth - 1;
+        }
+
+        while (!empty($last_ids)) {
+            $top_ids = array_splice($last_ids, 0, $top_ids_length); // 每次取10个出来查询
+            $sons = TestBinaryTree::query()
+                ->select($select_fields)
+                ->where('depth', '>', $start_depth)
+                ->where('depth', '<=', $end_depth)
+                ->where('depth', '<=', $max_depth)
+                ->whereIn($whereIn_key, $top_ids)
+                ->orderBy('depth')
+                ->orderBy('v_top_depth_x_10000000')
+                ->orderBy('v_top_depth_x_1000000')
+                ->orderBy('v_top_depth_x_100000')
+                ->orderBy('v_top_depth_x_10000')
+                ->orderBy('v_top_depth_x_1000')
+                ->orderBy('v_top_depth_x_100')
+                ->orderBy('v_top_depth_x_10')
+                ->orderBy('v_top_depth_x_1')
+                ->orderBy('v_depth_x_1')
+                ->get();
+            $node_1 = $sons->where('add_enable', true)->first();
+            if ($node_1) {
+                $node = $node_1;
+                $max_depth = $node->depth - 1;
+            }
+
+            $new_last_ids_1 = $sons->where('depth', $end_depth)->pluck('id')->toArray();
+            array_merge($new_last_ids, $new_last_ids_1);
+            
+        }
+        
+        $data = [
+            'parent' => $node,
+            'start_depth' => $start_depth,
+            'end_depth' => $end_depth,
+            'last_ids' => $new_last_ids,
+        ];
+
+        return $data;
+    }
+
 
     // 获取ID节点下可添加的点位 -- 左腿【右腿】最底部
     public static function searchAddEnableNodeById_Leg_MaxDepth($id, $leg = 'L')
@@ -315,14 +374,14 @@ class TestBinaryTree extends Model
 
     /**
      * @param $id
-     * @param int $depth 获取的相对层数
+     * @param int $max_depth_num 获取的相对层数，默认获取 10层
      * @return array
      * 获取ID所有子节点
+     * 循环获取子集
      */
-    public static function getSonsById($id, $depth = 10)
+    public static function getSonsById($id, $depth_num = 10)
     {
-        $testBinaryTree = TestBinaryTree::query()->find($id);
-        $max_depth = $testBinaryTree->depth + $depth;
+        $start_time = microtime(true);
 
         $select_fields = [
             'id',
@@ -330,55 +389,133 @@ class TestBinaryTree extends Model
             'depth',
         ];
 
+        $parent = TestBinaryTree::query()->find($id);
+        $max_depth = $parent->depth + $depth_num;
+        $full_path_last_depth = TestBinaryTree::getFullPathLastDepth($parent->depth);
         $sons = TestBinaryTree::query()
             ->select($select_fields)
-            ->where('depth', '>', $testBinaryTree->depth)
+            ->where('depth', '>', $parent->depth)
+            ->where('depth', '<=', $full_path_last_depth)
             ->where('depth', '<=', $max_depth)
             ->where('full_path', 'like', "%-{$id}-%")
-            ->orWhere('id', $id)
+            ->orderBy('depth')
+            ->orderBy('v_top_depth_x_10000000')
+            ->orderBy('v_top_depth_x_1000000')
+            ->orderBy('v_top_depth_x_100000')
+            ->orderBy('v_top_depth_x_10000')
+            ->orderBy('v_top_depth_x_1000')
+            ->orderBy('v_top_depth_x_100')
+            ->orderBy('v_top_depth_x_10')
+            ->orderBy('v_top_depth_x_1')
+            ->orderBy('v_depth_x_1')
             ->get();
 
-        $current_max_depth = $sons->max('depth');
-        $last_ids = $sons->where('depth', $current_max_depth)->pluck('id')->toArray();
+        $sons = $sons->prepend($parent);
 
-        while ($current_max_depth < $max_depth && $current_max_depth % 100 == 0) {
+        $last_ids = $sons->where('depth', $full_path_last_depth)->pluck('id')->toArray();
+        $start_depth = $full_path_last_depth;
+        while ($start_depth < $max_depth) { // depth 累加
 
-            $query = TestBinaryTree::query()->select($select_fields)
-                ->where('depth', '>', $current_max_depth)
-                ->where('depth', '<=', $max_depth);
-            if ($current_max_depth % 10000000 == 0) {
-                $query->whereIn('v_top_ids_depth_10000000', $last_ids);
-            }
-            else if ($current_max_depth % 1000000 == 0) {
-                $query->whereIn('v_top_ids_depth_1000000', $last_ids);
-            }
-            else if ($current_max_depth % 100000 == 0) {
-                $query->whereIn('v_top_ids_depth_100000', $last_ids);
-            }
-            else if ($current_max_depth % 10000 == 0) {
-                $query->whereIn('v_top_ids_depth_10000', $last_ids);
-            }
-            else if ($current_max_depth % 1000 == 0) {
-                $query->whereIn('v_top_ids_depth_1000', $last_ids);
-            }
-            else {
-                $query->whereIn('v_top_ids_depth_100', $last_ids);
-            }
-            $sons_1 = $query->get();
-            $sons = $sons->merge($sons_1);
+            $getSonsByLastIds_res = self::getSonsByLastIds($last_ids, $start_depth, $max_depth, $select_fields);
+            $last_ids = $getSonsByLastIds_res['last_ids'];
+            $start_depth = $getSonsByLastIds_res['end_depth'];
+            $sons_1 = $getSonsByLastIds_res['sons'];
 
-            $current_max_depth = $sons->max('depth');
-            $last_ids = $sons->where('depth', $current_max_depth)->pluck('id')->toArray();
+            if (count($sons_1) > 0) {
+                $sons->merge($sons_1);
+            } else {
+                break;
+            }
 
         }
 
         $meta = [
             'id' => $id,
-            'depth' => $depth,
+            'depth_num' => $depth_num,
             'max_depth' => $max_depth,
             'total_count' => count($sons),
+            'used_time' => microtime(true) - $start_time,
         ];
+
         return Tool::resSuccessMsg('', $sons, $meta);
+    }
+
+    // 根据 top_ids 获取子集
+    public static function getSonsByLastIds(array $last_ids, int $start_depth, int $max_depth, array $select_fields, $top_ids_length = 1024)
+    {
+        if ($start_depth % 10000000 == 0) {
+            $end_depth = $start_depth + 10000000;
+            $whereIn_key = 'v_top_ids_depth_10000000';
+        } else if ($start_depth % 1000000 == 0) {
+            $end_depth = $start_depth + 1000000;
+            $whereIn_key = 'v_top_ids_depth_1000000';
+        } else if ($start_depth % 100000 == 0) {
+            $end_depth = $start_depth + 100000;
+            $whereIn_key = 'v_top_ids_depth_100000';
+        } else if ($start_depth % 10000 == 0) {
+            $end_depth = $start_depth + 10000;
+            $whereIn_key = 'v_top_ids_depth_10000';
+        } else if ($start_depth % 1000 == 0) {
+            $end_depth = $start_depth + 1000;
+            $whereIn_key = 'v_top_ids_depth_1000';
+        } else if ($start_depth % 100 == 0) {
+            $end_depth = $start_depth + 100;
+            $whereIn_key = 'v_top_ids_depth_100';
+        } else { // $start_depth % 10 == 0
+            $end_depth = $start_depth + 10;
+            $whereIn_key = 'v_top_ids_depth_10';
+        }
+
+        $top_ids = array_splice($last_ids, 0, $top_ids_length); // 每次取10个出来查询
+        $sons = TestBinaryTree::query()
+            ->select($select_fields)
+            ->where('depth', '>', $start_depth)
+            ->where('depth', '<=', $end_depth)
+            ->where('depth', '<=', $max_depth)
+            ->whereIn($whereIn_key, $top_ids)
+            ->orderBy('depth')
+            ->orderBy('v_top_depth_x_10000000')
+            ->orderBy('v_top_depth_x_1000000')
+            ->orderBy('v_top_depth_x_100000')
+            ->orderBy('v_top_depth_x_10000')
+            ->orderBy('v_top_depth_x_1000')
+            ->orderBy('v_top_depth_x_100')
+            ->orderBy('v_top_depth_x_10')
+            ->orderBy('v_top_depth_x_1')
+            ->orderBy('v_depth_x_1')
+            ->get();
+
+        while (!empty($last_ids)) {
+            $top_ids = array_splice($last_ids, 0, $top_ids_length); // 每次取10个出来查询
+            $sons_1 = TestBinaryTree::query()
+                ->select($select_fields)
+                ->where('depth', '>', $start_depth)
+                ->where('depth', '<=', $end_depth)
+                ->where('depth', '<=', $max_depth)
+                ->whereIn($whereIn_key, $top_ids)
+                ->orderBy('depth')
+                ->orderBy('v_top_depth_x_10000000')
+                ->orderBy('v_top_depth_x_1000000')
+                ->orderBy('v_top_depth_x_100000')
+                ->orderBy('v_top_depth_x_10000')
+                ->orderBy('v_top_depth_x_1000')
+                ->orderBy('v_top_depth_x_100')
+                ->orderBy('v_top_depth_x_10')
+                ->orderBy('v_top_depth_x_1')
+                ->orderBy('v_depth_x_1')
+                ->get();
+            $sons = $sons->merge($sons_1);
+        }
+
+        $last_ids = $sons->where('depth', $end_depth)->pluck('id')->toArray();
+        $data = [
+            'start_depth' => $start_depth,
+            'end_depth' => $end_depth,
+            'sons' => $sons,
+            'last_ids' => $last_ids,
+        ];
+
+        return $data;
     }
 
     /**
@@ -783,5 +920,11 @@ class TestBinaryTree extends Model
         if ($depth % 10000000 == 0) $top_ids['depth_10000000'] = $parent_id;
         $top_ids['depth'] = $depth + 1;
         return $top_ids;
+    }
+
+    // 根据当前层级，获取 full_path 的最后层级
+    public static function getFullPathLastDepth($depth)
+    {
+        return floor(($depth + self::$full_path_long) / 10) * 10;
     }
 }
