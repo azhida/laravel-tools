@@ -13,13 +13,13 @@
     },
     "autoload": {
         "psr-4": {
-            "Azhida\\Tools\\": "src"
+            "Azhida\\LaravelTools\\": "src"
         }
     },
     "extra": {
         "laravel": {
             "providers": [
-                "Azhida\\Tools\\ServiceProvider"
+                "Azhida\\LaravelTools\\ServiceProvider"
             ]
         }
     }
