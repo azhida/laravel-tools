@@ -1,6 +1,6 @@
 <?php
 
-namespace Azhida\Tools;
+namespace Azhida\LaravelTools;
 
 // 这是一个标准二叉树结构
 class BinaryTree

@@ -1,6 +1,6 @@
 <?php
 
-namespace Azhida\Tools;
+namespace Azhida\LaravelTools;
 
 use Monolog\Handler\StreamHandler;
 use Monolog\Logger;

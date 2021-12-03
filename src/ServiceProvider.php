@@ -1,6 +1,6 @@
 <?php
 
-namespace Azhida\Tools;
+namespace Azhida\LaravelTools;
 
 class ServiceProvider extends \Illuminate\Support\ServiceProvider
 {

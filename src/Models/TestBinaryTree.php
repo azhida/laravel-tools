@@ -1,9 +1,8 @@
 <?php
 
-namespace Azhida\Tools\Models;
+namespace Azhida\LaravelTools\Models;
 
-use Azhida\Tools\Models\TestBinaryTreeMaxDepth;
-use Azhida\Tools\Tool;
+use Azhida\LaravelTools\Tool;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -209,7 +208,7 @@ class TestBinaryTree extends Model
                 $parent = $searchAddEnableNodeByLastIds_DepthAsc_LToR_res['parent'];
                 $last_ids = $searchAddEnableNodeByLastIds_DepthAsc_LToR_res['last_ids'];
                 $start_depth = $searchAddEnableNodeByLastIds_DepthAsc_LToR_res['end_depth'];
-                
+
             }
 
         }
@@ -259,9 +258,9 @@ class TestBinaryTree extends Model
             ->orderBy('v_depth_x_1')
             ->get();
         $node = $sons->where('add_enable', true)->first();
-        
+
         $new_last_ids = $sons->where('depth', $end_depth)->pluck('id')->toArray();
-        
+
         if ($node) {
             // 同层的话，当前 $node 已经在最左边了，所以只需要查看是否存在 depth 比 $node 小的节点
             $max_depth = $node->depth - 1;
@@ -294,9 +293,9 @@ class TestBinaryTree extends Model
 
             $new_last_ids_1 = $sons->where('depth', $end_depth)->pluck('id')->toArray();
             array_merge($new_last_ids, $new_last_ids_1);
-            
+
         }
-        
+
         $data = [
             'parent' => $node,
             'start_depth' => $start_depth,
