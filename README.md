@@ -11,7 +11,7 @@ $ composer require azhida/laravel-tools -vvv
 ###### 发布迁移文件
 ```shell
 $ php artisan vendor:publish
-# 选择 Azhida\Tools\ServiceProvider
+# 选择 Azhida\LaravelTools\ServiceProvider
 ```
 ###### 执行迁移文件
 ```shell
